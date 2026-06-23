@@ -175,7 +175,7 @@ jobs:
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
           CCACHE_IS_KERNEL_COMPILING: "true"
-          CCACHE_DIR: ~/.ccache
+          CCACHE_DIR: /home/runner/.ccache
           PATH: /home/runner/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: |
           if [ "$INPUT_HZ" == "powersave" ]; then HZ_ID=100
@@ -236,7 +236,7 @@ jobs:
       - name: Cache ccache-ECS
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: /home/runner/.ccache
           key: ccache-ecs-${{ runner.os }}-${{ hashFiles('kernel-source/arch/arm64/configs/**') }}
           restore-keys: |
             ccache-ecs-${{ runner.os }}-
@@ -245,22 +245,8 @@ jobs:
         run: |
           bash builder/scripts/setup_ccache.sh
         env:
-          CCACHE_DIR: ~/.ccache
+          CCACHE_DIR: /home/runner/.ccache
           CCACHE_MAXSIZE: 5G
-
-      - name: Cache ccache-ECS
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ccache-ecs-${{ runner.os }}-${{ hashFiles('kernel-source/arch/arm64/configs/**') }}
-          restore-keys: |
-            ccache-ecs-${{ runner.os }}-
-
-      - name: Setup ccache-ECS
-        env:
-          CCACHE_DIR: ~/.ccache
-          CCACHE_MAXSIZE: 5G
-        run: bash builder/scripts/setup_ccache.sh
 
       - name: Setup Clang
         run: |
@@ -289,7 +275,7 @@ jobs:
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
           CCACHE_IS_KERNEL_COMPILING: "true"
-          CCACHE_DIR: ~/.ccache
+          CCACHE_DIR: /home/runner/.ccache
           PATH: /home/runner/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           INPUT_VERSION_SPOOF: ${{ inputs.kernel_version_spoof }}
         run: |
