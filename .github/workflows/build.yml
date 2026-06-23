@@ -174,6 +174,9 @@ jobs:
           INPUT_DEBUG: ${{ inputs.debug }}
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
+          CCACHE_IS_KERNEL_COMPILING: "true"
+          CCACHE_DIR: ~/.ccache
+          PATH: /home/runner/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: |
           if [ "$INPUT_HZ" == "powersave" ]; then HZ_ID=100
           elif [ "$INPUT_HZ" == "balance" ]; then HZ_ID=250
@@ -228,7 +231,22 @@ jobs:
             lib32ncurses-dev lib32readline-dev lib32z1-dev libncurses-dev \
             libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush \
             rsync schedtool squashfs-tools xsltproc zip zlib1g-dev \
-            python3 clang lld llvm jq
+            python3 clang lld llvm jq unzip
+
+      - name: Cache ccache-ECS
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-ecs-${{ runner.os }}-${{ hashFiles('kernel-source/arch/arm64/configs/**') }}
+          restore-keys: |
+            ccache-ecs-${{ runner.os }}-
+
+      - name: Setup ccache-ECS
+        run: |
+          bash builder/scripts/setup_ccache.sh
+        env:
+          CCACHE_DIR: ~/.ccache
+          CCACHE_MAXSIZE: 5G
 
       - name: Setup Clang
         run: |
@@ -256,6 +274,9 @@ jobs:
           INPUT_DEBUG: ${{ inputs.debug }}
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
+          CCACHE_IS_KERNEL_COMPILING: "true"
+          CCACHE_DIR: ~/.ccache
+          PATH: /home/runner/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           INPUT_VERSION_SPOOF: ${{ inputs.kernel_version_spoof }}
         run: |
           bash builder/scripts/build.sh
