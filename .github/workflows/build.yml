@@ -238,6 +238,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git anykernel
           cp kernel-source/anykernel/anykernel.sh anykernel/anykernel.sh
+          cp -r kernel-source/anykernel/tools/* anykernel/tools/
 
       - name: Build Kernel
         env:
