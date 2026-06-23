@@ -42,6 +42,7 @@ This repo handles:
 - [AnyKernel3](https://github.com/osm0sis/AnyKernel3) by osm0sis
 - Neutron Toolchains
 - DumpC2J-Kernel contributors
+- Special thanks to [@ireddragonicy](https://t.me/ireddragonicy_archive) 🥰
 
 ---
 
