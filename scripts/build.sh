@@ -304,6 +304,7 @@ if [ -f "$CCACHE_BIN" ]; then
     echo "#!/bin/sh"
     echo "export CCACHE_IS_KERNEL_COMPILING=true"
     echo "export CCACHE_BASEDIR=${KERNEL_DIR}"
+    echo "export CCACHE_DIR=/home/runner/.ccache"
     echo "export CCACHE_COMPILER=${CLANG_PATH}/clang"
     echo "exec ${CCACHE_BIN} ${CLANG_PATH}/clang \"\$@\""
   } > "$WRAPPER"
