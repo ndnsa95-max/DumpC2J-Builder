@@ -298,6 +298,8 @@ if [ -f "$CCACHE_BIN" ]; then
   export CCACHE_COMPRESS=1
   export CCACHE_COMPRESSLEVEL=1
   export PATH="${HOME}/ccache-bin:${PATH}"
+  # Symlink clang -> ccache agar Kbuild auto-intercept
+  ln -sf "$CCACHE_BIN" "${HOME}/ccache-bin/clang"
   echo "[+] ccache-ECS active | compiler: ${CLANG_PATH}/clang"
 else
   echo "[!] ccache-ECS not found, skipping"
