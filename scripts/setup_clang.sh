@@ -60,12 +60,15 @@ case "${CLANG_VARIANT}" in
     COMPILER_STRING="ZyC Clang ${ZYC_VER}"
     ;;
   aosp)
+    # AOSP Clang via git sparse checkout (googlesource tar corrupt)
     AOSP_CLANG=$(curl -s "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/refs/heads/main/README.md?format=TEXT"       | base64 -d 2>/dev/null | grep -oP 'clang-r[0-9a-z]+' | tail -1)
-    AOSP_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/${AOSP_CLANG}.tar.gz"
+    [ -z "${AOSP_CLANG}" ] && AOSP_CLANG="clang-r536225"
     mkdir -p "${HOME}/toolchains/aosp-clang"
-    curl -Lo /tmp/aosp-clang.tar.gz "${AOSP_URL}"
-    tar -xf /tmp/aosp-clang.tar.gz -C "${HOME}/toolchains/aosp-clang"
-    rm /tmp/aosp-clang.tar.gz
+    git clone --depth=1 --filter=blob:none --sparse       https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86       /tmp/aosp-clang-repo
+    cd /tmp/aosp-clang-repo
+    git sparse-checkout set "${AOSP_CLANG}"
+    cp -r "${AOSP_CLANG}/." "${HOME}/toolchains/aosp-clang/"
+    cd - && rm -rf /tmp/aosp-clang-repo
     CLANG_BIN="${HOME}/toolchains/aosp-clang/bin"
     AOSP_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
     COMPILER_STRING="AOSP Clang ${AOSP_VER}"
