@@ -433,7 +433,7 @@ echo "[DEBUG] CC_CCACHE=${CC_CCACHE:-EMPTY}"
 [ -f "${CC_CCACHE}" ] && cat "${CC_CCACHE}" || echo "[DEBUG] wrapper not found"
 make -C "$KERNEL_DIR" \
   "-j${CPUS}" O="$OUT_DIR" \
-  CC="${CC_CCACHE:-clang}" LD=ld.lld AR=llvm-ar NM=llvm-nm \
+  LD=ld.lld AR=llvm-ar NM=llvm-nm \
   OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
   LLVM=1 LLVM_IAS=1 \
   KCFLAGS="$KERNEL_KCFLAGS" LDFLAGS="$KERNEL_LDFLAGS" \
