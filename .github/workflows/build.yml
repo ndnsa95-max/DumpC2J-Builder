@@ -25,7 +25,16 @@ on:
           - cirrus
           - weebx
           - zyc
-        default: cirrus
+        default: neutron
+      mount_method:
+        description: "Mount Method"
+        required: false
+        type: choice
+        options:
+          - none
+          - nomount
+          - zeromount
+        default: none
       hz:
         description: "Refresh Rate (HZ)"
         required: true
@@ -173,6 +182,7 @@ jobs:
           INPUT_WIFI: ${{ inputs.wifi_exploit }}
           INPUT_KGSL: ${{ inputs.kgsl_exploit }}
           INPUT_DATA: ${{ inputs.data_exploit }}
+          INPUT_MOUNT_METHOD: ${{ inputs.mount_method || 'none' }}
           INPUT_DEBUG: ${{ inputs.debug }}
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
@@ -189,6 +199,7 @@ jobs:
             ACTUAL_ROOT="none"
           fi
           echo "ACTUAL_ROOT=$ACTUAL_ROOT" >> $GITHUB_ENV
+          echo "MOUNT_METHOD=${INPUT_MOUNT_METHOD:-none}" >> $GITHUB_ENV
 
           if [ "$INPUT_VARIANT" == "stock" ]; then
             BUILD_NAME="${INPUT_VARIANT}-${INPUT_HZ}"
@@ -253,6 +264,7 @@ jobs:
           INPUT_WIFI: ${{ inputs.wifi_exploit }}
           INPUT_KGSL: ${{ inputs.kgsl_exploit }}
           INPUT_DATA: ${{ inputs.data_exploit }}
+          INPUT_MOUNT_METHOD: ${{ inputs.mount_method || 'none' }}
           INPUT_BYPASS: ${{ inputs.bypasscharging }}
           INPUT_DROIDSPACES: ${{ inputs.droidspaces }}
           INPUT_DEBUG: ${{ inputs.debug }}

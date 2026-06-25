@@ -205,6 +205,14 @@ if [ "$VARIANT" == "susfs" ]; then
 fi
 
 # ==========================================
+# NoMount / ZeroMount
+# ==========================================
+if [ "$MOUNT_METHOD" == "nomount" ] || [ "$MOUNT_METHOD" == "zeromount" ]; then
+  echo "[+] Applying $MOUNT_METHOD..."
+  bash "${GITHUB_WORKSPACE}/builder/scripts/setup/setup_nomount.sh" "$KERNEL_DIR" "$MOUNT_METHOD"
+fi
+
+# ==========================================
 # Baseband-guard
 # ==========================================
 BBG_DIR="$KERNEL_DIR/Baseband-guard"
@@ -311,6 +319,16 @@ case "$VARIANT" in
     -e CONFIG_KSU -d CONFIG_KSU_SUSFS ;;
   susfs) "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
     -e CONFIG_KSU -e CONFIG_KSU_SUSFS -e CONFIG_KSU_SUSFS_SUS_MAP ;;
+esac
+
+# Mount method config
+case "$MOUNT_METHOD" in
+  nomount)   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
+    -e CONFIG_KSU_NOMOUNT -d CONFIG_KSU_ZEROMOUNT ;;
+  zeromount) "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
+    -d CONFIG_KSU_NOMOUNT -e CONFIG_KSU_ZEROMOUNT ;;
+  *)         "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
+    -d CONFIG_KSU_NOMOUNT -d CONFIG_KSU_ZEROMOUNT ;;
 esac
 
 # KPM config
@@ -446,6 +464,8 @@ esac
 
 # Optional features (hanya tulis kalau aktif)
 OPT_LABEL=""
+[ "$MOUNT_METHOD" == "nomount" ]   && OPT_LABEL="${OPT_LABEL}-nomount"
+[ "$MOUNT_METHOD" == "zeromount" ] && OPT_LABEL="${OPT_LABEL}-zeromount"
 [ "$KPM" == "on" ]          && OPT_LABEL="${OPT_LABEL}-kpm"
 [ "$HARDENED" == "on" ]     && OPT_LABEL="${OPT_LABEL}-hardened"
 [ "$BYPASSCHARGING" == "on" ] && OPT_LABEL="${OPT_LABEL}-bypasscharging"
