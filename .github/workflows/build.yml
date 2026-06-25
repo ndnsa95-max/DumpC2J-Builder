@@ -313,6 +313,8 @@ jobs:
             **KPM:** ${{ inputs.kpm }}
             **Hardened:** ${{ inputs.hardened }}
             **Clang:** ${{ inputs.clang_variant }}
+            **Mount:** ${{ inputs.mount_method || 'none' }}
+            **Spoof Uname:** ${{ inputs.spoof_uname || 'off' }}
 
             ### Performance Mods
             | Feature | Status |
