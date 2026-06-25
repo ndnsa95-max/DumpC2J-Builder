@@ -350,17 +350,13 @@ elif [ "$MOUNT_METHOD" == "zeromount" ]; then
 
     # Apply ZeroMount kernel patches
     echo "[+] Applying ZeroMount patches..."
-    ZMOUNT_PATCHES="${GITHUB_WORKSPACE}/builder/patches/zeromount"
-    # Fallback: clone Super-Builders kalau patch tidak ada di repo
-    if [ ! -d "$ZMOUNT_PATCHES" ]; then
-        echo "[+] Downloading ZeroMount patches from Super-Builders..."
-        git clone --depth=1 https://github.com/Enginex0/Super-Builders /tmp/super-builders
-        mkdir -p "$ZMOUNT_PATCHES"
-        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/50_add_susfs_in_gki-android15-6.6.patch "$ZMOUNT_PATCHES/"
-        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/51_enhanced_susfs-android15-6.6.patch "$ZMOUNT_PATCHES/"
-        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/60_zeromount-android15-6.6.patch "$ZMOUNT_PATCHES/"
-        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/70_ksu_safety-sukisu-6.6.patch "$ZMOUNT_PATCHES/"
-    fi
+    case "$ACTUAL_ROOT" in
+        resukisu) ZMOUNT_VARIANT="resukisu" ;;
+        ksu-next) ZMOUNT_VARIANT="ksu-next" ;;
+        *)        ZMOUNT_VARIANT="sukisu" ;;
+    esac
+    ZMOUNT_PATCHES="${GITHUB_WORKSPACE}/builder/patches/zeromount/${ZMOUNT_VARIANT}"
+    echo "[+] Using ZeroMount patch set: $ZMOUNT_VARIANT"
 
     cd "$KERNEL_DIR"
     for patch in 50_add_susfs 51_enhanced_susfs 70_ksu_safety 60_zeromount; do

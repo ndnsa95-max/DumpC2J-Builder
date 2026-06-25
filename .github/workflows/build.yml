@@ -138,7 +138,7 @@ on:
           - "on"
         default: "off"
       mount_method:
-        description: "Mount Method (VFS Path Injection)"
+        description: "Mount Method (VFS Path Injection) [zeromount: sukisu/resukisu/ksu-next only]"
         required: true
         type: choice
         options:
