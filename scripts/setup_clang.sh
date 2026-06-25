@@ -32,18 +32,6 @@ case "${CLANG_VARIANT}" in
     GF_VERSION=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "23.0.0")
     COMPILER_STRING="Cirrus Clang ${GF_VERSION}"
     ;;
-  azure)
-    # Panchajanya1999/clang-llvm inactive, use WeebX directly
-    echo "[!] Azure upstream inactive, using WeebX base"
-    AZURE_URL=$(curl -s https://raw.githubusercontent.com/XSans0/WeebX-Clang/main/main/link.txt)
-    mkdir -p "${HOME}/toolchains/azure-clang"
-    curl -Lo /tmp/azure-clang.tar.gz "${AZURE_URL}"
-    tar -xf /tmp/azure-clang.tar.gz -C "${HOME}/toolchains/azure-clang" --strip-components=1
-    rm /tmp/azure-clang.tar.gz
-    CLANG_BIN="${HOME}/toolchains/azure-clang/bin"
-    AZ_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
-    COMPILER_STRING="Azure Clang ${AZ_VER}"
-    ;;
   weebx)
     WEEBX_URL=$(curl -s https://raw.githubusercontent.com/XSans0/WeebX-Clang/main/main/link.txt)
     mkdir -p "${HOME}/toolchains/weebx-clang"

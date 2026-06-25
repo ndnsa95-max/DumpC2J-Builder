@@ -23,7 +23,6 @@ on:
         options:
           - neutron
           - cirrus
-          - azure
           - weebx
           - zyc
         default: cirrus
