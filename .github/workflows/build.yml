@@ -137,6 +137,14 @@ on:
           - "off"
           - "on"
         default: "off"
+      nomount:
+        description: "NoMount (VFS Path Injection, no mount table)"
+        required: true
+        type: choice
+        options:
+          - "off"
+          - "on"
+        default: "off"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -176,6 +184,7 @@ jobs:
           INPUT_DEBUG: ${{ inputs.debug }}
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
+          INPUT_NOMOUNT: ${{ inputs.nomount }}
         run: |
           if [ "$INPUT_HZ" == "powersave" ]; then HZ_ID=100
           elif [ "$INPUT_HZ" == "balance" ]; then HZ_ID=250
@@ -207,6 +216,7 @@ jobs:
           [ "$INPUT_KGSL" == "off" ] && BUILD_NAME="${BUILD_NAME}-nokgsl"
           [ "$INPUT_DATA" == "off" ] && BUILD_NAME="${BUILD_NAME}-nodata"
           [ "$INPUT_DEBUG" == "on" ] && BUILD_NAME="${BUILD_NAME}-debug"
+          [ "$INPUT_NOMOUNT" == "on" ] && BUILD_NAME="${BUILD_NAME}-nomount"
 
           echo "BUILD_NAME=$BUILD_NAME" >> $GITHUB_ENV
 
@@ -259,6 +269,7 @@ jobs:
           INPUT_KERNEL_NAME: ${{ inputs.kernel_name }}
           INPUT_SPOOF_UNAME: ${{ inputs.spoof_uname }}
           INPUT_VERSION_SPOOF: ${{ inputs.kernel_version_spoof }}
+          INPUT_NOMOUNT: ${{ inputs.nomount }}
         run: |
           bash builder/scripts/build.sh
 
@@ -312,6 +323,7 @@ jobs:
             | KGSL GPU Bypass | ${{ inputs.kgsl_exploit }} |
             | Data Exploits | ${{ inputs.data_exploit }} |
             | Debug Mode | ${{ inputs.debug }} |
+            | NoMount | ${{ inputs.nomount }} |
 
             Commit: ${{ github.sha }}
           files: release_assets/*

@@ -34,6 +34,7 @@ DEBUG_MODE="${INPUT_DEBUG:-off}"
 KERNEL_NAME="${INPUT_KERNEL_NAME:--DumpC2J-Kernel}"
 SPOOF_UNAME="${INPUT_SPOOF_UNAME:-on}"
 VERSION_SPOOF="${INPUT_VERSION_SPOOF:-}"
+NOMOUNT="${INPUT_NOMOUNT:-off}"
 
 # Map HZ label to number
 case "$HZ" in
@@ -341,6 +342,13 @@ case "$HZ_ID" in
 esac
 
 # Hardened
+# NoMount config
+if [ "$NOMOUNT" == "on" ]; then
+    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -e CONFIG_NOMOUNT
+else
+    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_NOMOUNT
+fi
+
 [ "$HARDENED" == "off" ] && "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
   -d CONFIG_CPU_MITIGATIONS -d CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY
 
@@ -454,6 +462,7 @@ OPT_LABEL=""
 [ "$WIFI_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nowifi"
 [ "$KGSL_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nokgsl"
 [ "$DATA_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nodata"
+[ "$NOMOUNT" == "on" ] && OPT_LABEL="${OPT_LABEL}-nomount"
 [ "$DEBUG" == "on" ]        && OPT_LABEL="${OPT_LABEL}-debug"
 
 case "$HZ_ID" in
