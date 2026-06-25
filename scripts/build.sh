@@ -324,11 +324,11 @@ esac
 # Mount method config
 case "$MOUNT_METHOD" in
   nomount)   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
-    -e CONFIG_KSU_NOMOUNT -d CONFIG_KSU_ZEROMOUNT ;;
+    -e CONFIG_NOMOUNT -d CONFIG_ZEROMOUNT ;;
   zeromount) "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
-    -d CONFIG_KSU_NOMOUNT -e CONFIG_KSU_ZEROMOUNT ;;
+    -d CONFIG_NOMOUNT -e CONFIG_ZEROMOUNT ;;
   *)         "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
-    -d CONFIG_KSU_NOMOUNT -d CONFIG_KSU_ZEROMOUNT ;;
+    -d CONFIG_NOMOUNT -d CONFIG_ZEROMOUNT ;;
 esac
 
 # KPM config
