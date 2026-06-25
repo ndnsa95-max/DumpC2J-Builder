@@ -34,7 +34,7 @@ DEBUG_MODE="${INPUT_DEBUG:-off}"
 KERNEL_NAME="${INPUT_KERNEL_NAME:--DumpC2J-Kernel}"
 SPOOF_UNAME="${INPUT_SPOOF_UNAME:-on}"
 VERSION_SPOOF="${INPUT_VERSION_SPOOF:-}"
-NOMOUNT="${INPUT_NOMOUNT:-off}"
+MOUNT_METHOD="${INPUT_MOUNT_METHOD:-off}"
 
 # Map HZ label to number
 case "$HZ" in
@@ -342,11 +342,36 @@ case "$HZ_ID" in
 esac
 
 # Hardened
-# NoMount config
-if [ "$NOMOUNT" == "on" ]; then
-    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -e CONFIG_NOMOUNT
+# Mount Method config
+if [ "$MOUNT_METHOD" == "nomount" ]; then
+    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -e CONFIG_NOMOUNT -d CONFIG_ZEROMOUNT
+elif [ "$MOUNT_METHOD" == "zeromount" ]; then
+    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_NOMOUNT -e CONFIG_ZEROMOUNT
+
+    # Apply ZeroMount kernel patches
+    echo "[+] Applying ZeroMount patches..."
+    ZMOUNT_PATCHES="${GITHUB_WORKSPACE}/builder/patches/zeromount"
+    # Fallback: clone Super-Builders kalau patch tidak ada di repo
+    if [ ! -d "$ZMOUNT_PATCHES" ]; then
+        echo "[+] Downloading ZeroMount patches from Super-Builders..."
+        git clone --depth=1 https://github.com/Enginex0/Super-Builders /tmp/super-builders
+        mkdir -p "$ZMOUNT_PATCHES"
+        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/50_add_susfs_in_gki-android15-6.6.patch "$ZMOUNT_PATCHES/"
+        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/51_enhanced_susfs-android15-6.6.patch "$ZMOUNT_PATCHES/"
+        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/60_zeromount-android15-6.6.patch "$ZMOUNT_PATCHES/"
+        cp /tmp/super-builders/android15-6.6/SukiSU-Ultra/patches/70_ksu_safety-sukisu-6.6.patch "$ZMOUNT_PATCHES/"
+    fi
+
+    cd "$KERNEL_DIR"
+    for patch in 50_add_susfs 51_enhanced_susfs 70_ksu_safety 60_zeromount; do
+        PATCH_FILE=$(ls "$ZMOUNT_PATCHES/${patch}"*.patch 2>/dev/null | head -1)
+        if [ -f "$PATCH_FILE" ]; then
+            echo "[+] Applying $PATCH_FILE..."
+            patch -p1 --forward -f --reject-file=- < "$PATCH_FILE" || true
+        fi
+    done
 else
-    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_NOMOUNT
+    "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_NOMOUNT -d CONFIG_ZEROMOUNT
 fi
 
 [ "$HARDENED" == "off" ] && "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
@@ -462,7 +487,7 @@ OPT_LABEL=""
 [ "$WIFI_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nowifi"
 [ "$KGSL_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nokgsl"
 [ "$DATA_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nodata"
-[ "$NOMOUNT" == "on" ] && OPT_LABEL="${OPT_LABEL}-nomount"
+[ "$MOUNT_METHOD" != "off" ] && OPT_LABEL="${OPT_LABEL}-${MOUNT_METHOD}"
 [ "$DEBUG" == "on" ]        && OPT_LABEL="${OPT_LABEL}-debug"
 
 case "$HZ_ID" in
