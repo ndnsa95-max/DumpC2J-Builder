@@ -359,7 +359,13 @@ elif [ "$MOUNT_METHOD" == "zeromount" ]; then
     echo "[+] Using ZeroMount patch set: $ZMOUNT_VARIANT"
 
     cd "$KERNEL_DIR"
-    for patch in 50_add_susfs 51_enhanced_susfs 70_ksu_safety 60_zeromount; do
+    # Skip 50_/51_ kalau susfs — SUSFS udah di-inject duluan dari susfs4ksu
+    if [ "$VARIANT" == "susfs" ]; then
+        PATCH_ORDER="70_ksu_safety 60_zeromount"
+    else
+        PATCH_ORDER="50_add_susfs 51_enhanced_susfs 70_ksu_safety 60_zeromount"
+    fi
+    for patch in $PATCH_ORDER; do
         PATCH_FILE=$(ls "$ZMOUNT_PATCHES/${patch}"*.patch 2>/dev/null | head -1)
         if [ -f "$PATCH_FILE" ]; then
             echo "[+] Applying $PATCH_FILE..."
