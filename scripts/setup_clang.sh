@@ -17,10 +17,18 @@ case "${CLANG_VARIANT}" in
     COMPILER_STRING="Neutron Clang 23.0.0"
     ;;
   cirrus)
-    curl -Lo ~/get_clang.sh \
-      https://raw.githubusercontent.com/greenforce-project/greenforce_clang/refs/heads/main/get_clang.sh
-    bash ~/get_clang.sh
-    CLANG_BIN="${HOME}/greenforce-clang/bin"
+    CIRRUS_URL=$(curl -s https://api.github.com/repos/greenforce-project/greenforce_clang/releases/latest \
+      | python3 -c "import json,sys; d=json.load(sys.stdin); print(next((x['browser_download_url'] for x in d.get('assets',[]) if x['name'].endswith('.tar.gz')), ''))")
+    if [ -z "${CIRRUS_URL}" ]; then
+      echo "[!] Cirrus release not found"
+      exit 1
+    fi
+    echo "[*] Cirrus URL: ${CIRRUS_URL}"
+    mkdir -p "${HOME}/toolchains/cirrus-clang"
+    curl -Lo /tmp/cirrus-clang.tar.gz "${CIRRUS_URL}"
+    tar -xf /tmp/cirrus-clang.tar.gz -C "${HOME}/toolchains/cirrus-clang" --strip-components=1
+    rm /tmp/cirrus-clang.tar.gz
+    CLANG_BIN="${HOME}/toolchains/cirrus-clang/bin"
     GF_VERSION=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "23.0.0")
     COMPILER_STRING="Cirrus Clang ${GF_VERSION}"
     ;;
