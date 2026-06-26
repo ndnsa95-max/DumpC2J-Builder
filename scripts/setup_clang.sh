@@ -2,18 +2,48 @@
 set -e
 
 CLANG_VARIANT="${1:-neutron}"
+CACHE_HIT="${2:-}"
 
 echo "[*] Setting up Clang: ${CLANG_VARIANT}"
 
+if [ "${CACHE_HIT}" == "--cache-hit" ]; then
+  echo "[+] Clang restored from cache"
+  case "${CLANG_VARIANT}" in
+    neutron) CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/neutron-clang/bin" ;;
+    cirrus)  CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/cirrus-clang/bin" ;;
+    weebx)   CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/weebx-clang/bin" ;;
+    zyc)     CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/zyc-clang/bin" ;;
+  esac
+  if ! "${CLANG_BIN}/clang" --version > /dev/null 2>&1; then
+    if [ "${CLANG_VARIANT}" == "neutron" ]; then
+      cd "${GITHUB_WORKSPACE}/toolchains/neutron-clang"
+      [ -f antman ] && ./antman --patch=glibc || true
+      cd -
+    fi
+  fi
+  COMPILER_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
+  case "${CLANG_VARIANT}" in
+    neutron) COMPILER_STRING="Neutron Clang ${COMPILER_VER}" ;;
+    cirrus)  COMPILER_STRING="Cirrus Clang ${COMPILER_VER}" ;;
+    weebx)   COMPILER_STRING="WeebX Clang ${COMPILER_VER}" ;;
+    zyc)     COMPILER_STRING="ZyC Clang ${COMPILER_VER}" ;;
+  esac
+  echo "CLANG_PATH=${CLANG_BIN}" >> "${GITHUB_ENV}"
+  echo "${CLANG_BIN}" >> "${GITHUB_PATH}"
+  echo "KBUILD_COMPILER_STRING=${COMPILER_STRING}" >> "${GITHUB_ENV}"
+  "${CLANG_BIN}/clang" --version
+  exit 0
+fi
+
 case "${CLANG_VARIANT}" in
   neutron)
-    mkdir -p "${HOME}/toolchains/neutron-clang"
-    cd "${HOME}/toolchains/neutron-clang"
+    mkdir -p "${GITHUB_WORKSPACE}/toolchains/neutron-clang"
+    cd "${GITHUB_WORKSPACE}/toolchains/neutron-clang"
     curl -Lo antman https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman
     chmod +x antman
     ./antman -S
     ./antman --patch=glibc
-    CLANG_BIN="${HOME}/toolchains/neutron-clang/bin"
+    CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/neutron-clang/bin"
     NEUTRON_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
     COMPILER_STRING="Neutron Clang ${NEUTRON_VER}"
     ;;
@@ -25,28 +55,28 @@ case "${CLANG_VARIANT}" in
       exit 1
     fi
     echo "[*] Cirrus URL: ${CIRRUS_URL}"
-    mkdir -p "${HOME}/toolchains/cirrus-clang"
+    mkdir -p "${GITHUB_WORKSPACE}/toolchains/cirrus-clang"
     curl -Lo /tmp/cirrus-clang.tar.gz "${CIRRUS_URL}"
-    tar -xf /tmp/cirrus-clang.tar.gz -C "${HOME}/toolchains/cirrus-clang" --strip-components=1
+    tar -xf /tmp/cirrus-clang.tar.gz -C "${GITHUB_WORKSPACE}/toolchains/cirrus-clang" --strip-components=1
     rm /tmp/cirrus-clang.tar.gz
-    CLANG_BIN="${HOME}/toolchains/cirrus-clang/bin"
+    CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/cirrus-clang/bin"
     GF_VERSION=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "23.0.0")
     COMPILER_STRING="Cirrus Clang ${GF_VERSION}"
     ;;
   weebx)
     WEEBX_URL=$(curl -s https://raw.githubusercontent.com/XSans0/WeebX-Clang/main/main/link.txt)
-    mkdir -p "${HOME}/toolchains/weebx-clang"
+    mkdir -p "${GITHUB_WORKSPACE}/toolchains/weebx-clang"
     wget -q "${WEEBX_URL}" -O /tmp/weebx-clang.tar.gz
-    tar -xf /tmp/weebx-clang.tar.gz -C "${HOME}/toolchains/weebx-clang" --strip-components=1
+    tar -xf /tmp/weebx-clang.tar.gz -C "${GITHUB_WORKSPACE}/toolchains/weebx-clang" --strip-components=1
     rm /tmp/weebx-clang.tar.gz
-    CLANG_BIN="${HOME}/toolchains/weebx-clang/bin"
+    CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/weebx-clang/bin"
     WX_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
     COMPILER_STRING="WeebX Clang ${WX_VER}"
     ;;
   zyc)
     ZYC_URL=$(curl -sL https://raw.githubusercontent.com/ZyCromerZ/Clang/main/Clang-main-link.txt | tr -d '[:space:]')
     echo "[*] ZyC URL: ${ZYC_URL}"
-    mkdir -p "${HOME}/toolchains/zyc-clang"
+    mkdir -p "${GITHUB_WORKSPACE}/toolchains/zyc-clang"
     curl -L --fail --retry 3 -o /tmp/zyc-clang.tar.gz "${ZYC_URL}"
     echo "[*] ZyC tar structure (first 10):"
     tar -tf /tmp/zyc-clang.tar.gz 2>/dev/null | head -10
@@ -58,9 +88,9 @@ case "${CLANG_VARIANT}" in
     STRIP=$(( DEPTH - 2 ))
     [ "$STRIP" -lt 0 ] && STRIP=0
     echo "[*] bin/clang found at: ${BIN_PATH} -> strip-components=${STRIP}"
-    tar -xf /tmp/zyc-clang.tar.gz -C "${HOME}/toolchains/zyc-clang" --strip-components=${STRIP}
+    tar -xf /tmp/zyc-clang.tar.gz -C "${GITHUB_WORKSPACE}/toolchains/zyc-clang" --strip-components=${STRIP}
     rm /tmp/zyc-clang.tar.gz
-    CLANG_BIN="${HOME}/toolchains/zyc-clang/bin"
+    CLANG_BIN="${GITHUB_WORKSPACE}/toolchains/zyc-clang/bin"
     ZYC_VER=$("${CLANG_BIN}/clang" --version | head -n1 | grep -oP 'clang version \K[0-9.]+' || echo "latest")
     COMPILER_STRING="ZyC Clang ${ZYC_VER}"
     ;;

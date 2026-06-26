@@ -242,9 +242,43 @@ jobs:
             rsync schedtool squashfs-tools xsltproc zip zlib1g-dev \
             python3 clang lld llvm jq
 
+      - name: Get Clang Cache Key
+        id: clang-key
+        run: |
+          case "${{ inputs.clang_variant }}" in
+            neutron)
+              KEY=$(curl -s https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])" 2>/dev/null || echo "fallback")
+              ;;
+            cirrus)
+              KEY=$(curl -s https://api.github.com/repos/greenforce-project/greenforce_clang/releases/latest | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])" 2>/dev/null || echo "fallback")
+              ;;
+            weebx)
+              KEY=$(curl -s https://raw.githubusercontent.com/XSans0/WeebX-Clang/main/main/link.txt | md5sum | cut -c1-8 || echo "fallback")
+              ;;
+            zyc)
+              KEY=$(curl -sL https://raw.githubusercontent.com/ZyCromerZ/Clang/main/Clang-main-link.txt | md5sum | cut -c1-8 || echo "fallback")
+              ;;
+          esac
+          echo "key=clang-${{ inputs.clang_variant }}-${KEY}" >> $GITHUB_OUTPUT
+
+      - name: Restore Clang Cache
+        id: clang-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/toolchains
+          key: ${{ steps.clang-key.outputs.key }}
+          restore-keys: |
+            clang-${{ inputs.clang_variant }}-
+
       - name: Setup Clang
+        if: steps.clang-cache.outputs.cache-hit != 'true'
         run: |
           bash builder/scripts/setup_clang.sh ${{ inputs.clang_variant }}
+
+      - name: Load Clang from Cache
+        if: steps.clang-cache.outputs.cache-hit == 'true'
+        run: |
+          bash builder/scripts/setup_clang.sh ${{ inputs.clang_variant }} --cache-hit
 
       - name: Setup AnyKernel3
         run: |
