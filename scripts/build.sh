@@ -463,7 +463,7 @@ OPT_LABEL=""
 [ "$KGSL_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nokgsl"
 [ "$DATA_EXPLOIT" == "off" ] && OPT_LABEL="${OPT_LABEL}-nodata"
 [ "$NOMOUNT" == "on" ] && OPT_LABEL="${OPT_LABEL}-nomount"
-[ "$DEBUG" == "on" ]        && OPT_LABEL="${OPT_LABEL}-debug"
+[ "$DEBUG_MODE" == "on" ]   && OPT_LABEL="${OPT_LABEL}-debug"
 
 case "$HZ_ID" in
   100)  HZ_LABEL="-powersave" ;;
