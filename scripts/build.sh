@@ -395,8 +395,9 @@ echo "$CURRENT_CMDLINE" | grep -q "init_on_alloc=" || CMDLINE_APPEND="$CMDLINE_A
 echo "$CURRENT_CMDLINE" | grep -q "page_alloc.shuffle=" || CMDLINE_APPEND="$CMDLINE_APPEND page_alloc.shuffle=0"
 echo "$CURRENT_CMDLINE" | grep -q "randomize_kstack_offset=" || CMDLINE_APPEND="$CMDLINE_APPEND randomize_kstack_offset=0"
 echo "$CURRENT_CMDLINE" | grep -q "loglevel=" || CMDLINE_APPEND="$CMDLINE_APPEND loglevel=0"
-[ "$DEBUG_MODE" == "on" ] && echo "$CURRENT_CMDLINE" | grep -q "nokaslr" || \
-  { [ "$DEBUG_MODE" == "on" ] && CMDLINE_APPEND="$CMDLINE_APPEND nokaslr"; }
+if [ "$DEBUG_MODE" == "on" ]; then
+  echo "$CURRENT_CMDLINE" | grep -q "nokaslr" || CMDLINE_APPEND="$CMDLINE_APPEND nokaslr"
+fi
 [ -n "$CMDLINE_APPEND" ] && \
   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
   --set-str CONFIG_CMDLINE "$CURRENT_CMDLINE$CMDLINE_APPEND"
