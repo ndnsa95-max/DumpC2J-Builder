@@ -219,6 +219,175 @@ echo "[+] Running Baseband-guard setup..."
 (cd "$KERNEL_DIR" && sh "$BBG_DIR/setup.sh")
 
 # ==========================================
+# Re-Kernel Integration
+# ==========================================
+echo "[*] Integrating Re-Kernel..."
+
+cat > "$KERNEL_DIR/drivers/android/rekernel.h" << 'RKEOF'
+#include <linux/init.h>
+#include <linux/types.h>
+#include <net/sock.h>
+#include <linux/netlink.h>
+#include <linux/proc_fs.h>
+#include <linux/freezer.h>
+#include <linux/sched/jobctl.h>
+
+#define NETLINK_REKERNEL_MAX    26
+#define NETLINK_REKERNEL_MIN    22
+#define USER_PORT               100
+#define PACKET_SIZE             128
+#define MIN_USERAPP_UID         (10000)
+#define MAX_SYSTEM_UID          (2000)
+#define RESERVE_ORDER           17
+#define WARN_AHEAD_SPACE        (1 << RESERVE_ORDER)
+
+static struct sock *rekernel_netlink = NULL;
+extern struct net init_net;
+static int netlink_unit = NETLINK_REKERNEL_MIN;
+
+static inline bool line_is_frozen(struct task_struct *task) {
+    return frozen(task->group_leader) || freezing(task->group_leader);
+}
+
+static int send_netlink_message(char *msg, uint16_t len) {
+    struct sk_buff *skbuffer;
+    struct nlmsghdr *nlhdr;
+    skbuffer = nlmsg_new(len, GFP_ATOMIC);
+    if (!skbuffer) { printk("netlink alloc failure.\n"); return -1; }
+    nlhdr = nlmsg_put(skbuffer, 0, 0, netlink_unit, len, 0);
+    if (!nlhdr) { printk("nlmsg_put failure.\n"); nlmsg_free(skbuffer); return -1; }
+    memcpy(nlmsg_data(nlhdr), msg, len);
+    return netlink_unicast(rekernel_netlink, skbuffer, USER_PORT, MSG_DONTWAIT);
+}
+
+static void netlink_rcv_msg(struct sk_buff *skbuffer) {}
+
+static struct netlink_kernel_cfg rekernel_cfg = { .input = netlink_rcv_msg };
+
+static int rekernel_unit_show(struct seq_file *m, void *v) {
+    seq_printf(m, "%d\n", netlink_unit); return 0;
+}
+static int rekernel_unit_open(struct inode *inode, struct file *file) {
+    return single_open(file, rekernel_unit_show, NULL);
+}
+static const struct file_operations rekernel_unit_fops = {
+    .open = rekernel_unit_open, .read = seq_read,
+    .llseek = seq_lseek, .release = single_release, .owner = THIS_MODULE,
+};
+
+static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
+
+static int start_rekernel_server(void) {
+    if (rekernel_netlink != NULL) return 0;
+    for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
+        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
+        if (rekernel_netlink != NULL) break;
+    }
+    if (rekernel_netlink == NULL) { printk("Failed to create Re:Kernel server!\n"); return -1; }
+    printk("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
+    rekernel_dir = proc_mkdir("rekernel", NULL);
+    if (!rekernel_dir) printk("create /proc/rekernel failed!\n");
+    else {
+        char buff[32];
+        sprintf(buff, "%d", netlink_unit);
+        rekernel_unit_entry = proc_create(buff, 0644, rekernel_dir, &rekernel_unit_fops);
+        if (!rekernel_unit_entry) printk("create rekernel unit failed!\n");
+    }
+    return 0;
+}
+RKEOF
+
+# Patch binder.c - header
+BINDER_C="$KERNEL_DIR/drivers/android/binder.c"
+if ! grep -q "rekernel.h" "$BINDER_C"; then
+    sed -i \'/#include "binder_trace.h"/a #include "rekernel.h"\' "$BINDER_C"
+    echo "[+] Re-Kernel: injected header into binder.c"
+fi
+
+# Patch binder.c & signal.c via Python (lebih aman dari sed multi-line)
+python3 << \'RKPY\'
+import re, sys
+
+# === binder.c ===
+with open("$KERNEL_DIR/drivers/android/binder.c", "r") as f:
+    bc = f.read()
+
+reply_hook = """
+		/* rekernel reply hook */
+		if (start_rekernel_server() == 0) {
+			if (target_proc && target_proc->tsk && proc->tsk
+				&& (task_uid(target_proc->tsk).val <= MAX_SYSTEM_UID)
+				&& (proc->pid != target_proc->pid)
+				&& line_is_frozen(target_proc->tsk)) {
+				char binder_kmsg[PACKET_SIZE];
+				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+				send_netlink_message(binder_kmsg, strlen(binder_kmsg));
+			}
+		}"""
+
+txn_hook = """
+		/* rekernel txn hook */
+		if (start_rekernel_server() == 0) {
+			if (target_proc && target_proc->tsk && proc->tsk
+				&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
+				&& (proc->pid != target_proc->pid)
+				&& line_is_frozen(target_proc->tsk)) {
+				char binder_kmsg[PACKET_SIZE];
+				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+				send_netlink_message(binder_kmsg, strlen(binder_kmsg));
+			}
+		}"""
+
+if "rekernel reply hook" not in bc:
+    bc = bc.replace(
+        "\t\tbinder_inner_proc_unlock(target_thread->proc);\n\t} else {",
+        "\t\tbinder_inner_proc_unlock(target_thread->proc);" + reply_hook + "\n\t} else {"
+    )
+    print("[+] binder.c: reply hook injected")
+
+if "rekernel txn hook" not in bc:
+    bc = bc.replace(
+        "\t\tif (security_binder_transaction(proc->cred,",
+        txn_hook + "\n\t\tif (security_binder_transaction(proc->cred,"
+    )
+    print("[+] binder.c: txn hook injected")
+
+with open("$KERNEL_DIR/drivers/android/binder.c", "w") as f:
+    f.write(bc)
+
+# === signal.c ===
+with open("$KERNEL_DIR/kernel/signal.c", "r") as f:
+    sc = f.read()
+
+sig_hook = """
+	/* rekernel signal hook */
+	if (start_rekernel_server() == 0) {
+		if (line_is_frozen(current) && (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT)) {
+			char binder_kmsg[PACKET_SIZE];
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(p), task_uid(p).val, task_tgid_nr(current), task_uid(current).val);
+			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
+		}
+	}"""
+
+if "rekernel signal hook" not in sc:
+    if \'#include "../drivers/android/rekernel.h"\' not in sc:
+        sc = sc.replace(\'#include <linux/freezer.h>\', \'#include <linux/freezer.h>\n#include "../drivers/android/rekernel.h"\')
+    sc = sc.replace(
+        "\tint ret = -ESRCH;\n\n\tif (lock_task_sighand",
+        "\tint ret = -ESRCH;" + sig_hook + "\n\n\tif (lock_task_sighand"
+    )
+    print("[+] signal.c: signal hook injected")
+
+with open("$KERNEL_DIR/kernel/signal.c", "w") as f:
+    f.write(sc)
+
+print("[+] Re-Kernel Python patching done!")
+\'RKPY\'
+
+echo "[+] Re-Kernel integration done!"
+
+
+# ==========================================
 # KPM Tools
 # ==========================================
 if [ "$KPM" == "on" ]; then
