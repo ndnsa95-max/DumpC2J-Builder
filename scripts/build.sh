@@ -249,8 +249,8 @@ if [ "$KPM" == "on" ]; then
     else
       KPTOOLS_URL="$KPM_RELEASE_BASE/kptools-linux"
     fi
-    curl -LSs -o "$KPTOOLS_BIN" "$KPTOOLS_URL"
-    curl -LSs -o "$KPIMG_BIN" "$KPM_RELEASE_BASE/$KPIMG_NAME"
+    curl -LSs -o "$KPTOOLS_BIN" "$KPTOOLS_URL" || { echo "[-] Failed to download kptools"; exit 1; }
+    curl -LSs -o "$KPIMG_BIN" "$KPM_RELEASE_BASE/$KPIMG_NAME" || { echo "[-] Failed to download kpimg"; exit 1; }
     chmod +x "$KPTOOLS_BIN"
   fi
 fi
@@ -302,14 +302,6 @@ echo "[+] Using Clang: $COMPILER_VER"
 # ==========================================
 mkdir -p "$OUT_DIR"
 
-# Apply HZ to defconfig before make
-case "$HZ_ID" in
-  100) sed -i 's/CONFIG_HZ_300=y/# CONFIG_HZ_300 is not set/g; s/CONFIG_HZ_250=y/# CONFIG_HZ_250 is not set/g; s/CONFIG_HZ_500=y/# CONFIG_HZ_500 is not set/g; s/CONFIG_HZ_1000=y/# CONFIG_HZ_1000 is not set/g; s/# CONFIG_HZ_100 is not set/CONFIG_HZ_100=y/g; s/CONFIG_HZ=.*/CONFIG_HZ=100/' arch/arm64/configs/konoha_defconfig ;;
-  250) sed -i 's/CONFIG_HZ_300=y/# CONFIG_HZ_300 is not set/g; s/CONFIG_HZ_100=y/# CONFIG_HZ_100 is not set/g; s/CONFIG_HZ_500=y/# CONFIG_HZ_500 is not set/g; s/CONFIG_HZ_1000=y/# CONFIG_HZ_1000 is not set/g; s/# CONFIG_HZ_250 is not set/CONFIG_HZ_250=y/g; s/CONFIG_HZ=.*/CONFIG_HZ=250/' arch/arm64/configs/konoha_defconfig ;;
-  300) sed -i 's/CONFIG_HZ_250=y/# CONFIG_HZ_250 is not set/g; s/CONFIG_HZ_100=y/# CONFIG_HZ_100 is not set/g; s/CONFIG_HZ_500=y/# CONFIG_HZ_500 is not set/g; s/CONFIG_HZ_1000=y/# CONFIG_HZ_1000 is not set/g; s/# CONFIG_HZ_300 is not set/CONFIG_HZ_300=y/g; s/CONFIG_HZ=.*/CONFIG_HZ=300/' arch/arm64/configs/konoha_defconfig ;;
-  500) sed -i 's/CONFIG_HZ_300=y/# CONFIG_HZ_300 is not set/g; s/CONFIG_HZ_100=y/# CONFIG_HZ_100 is not set/g; s/CONFIG_HZ_250=y/# CONFIG_HZ_250 is not set/g; s/CONFIG_HZ_1000=y/# CONFIG_HZ_1000 is not set/g; s/# CONFIG_HZ_500 is not set/CONFIG_HZ_500=y/g; s/CONFIG_HZ=.*/CONFIG_HZ=500/' arch/arm64/configs/konoha_defconfig ;;
-  1000) sed -i 's/CONFIG_HZ_300=y/# CONFIG_HZ_300 is not set/g; s/CONFIG_HZ_100=y/# CONFIG_HZ_100 is not set/g; s/CONFIG_HZ_250=y/# CONFIG_HZ_250 is not set/g; s/CONFIG_HZ_500=y/# CONFIG_HZ_500 is not set/g; s/# CONFIG_HZ_1000 is not set/CONFIG_HZ_1000=y/g; s/CONFIG_HZ=.*/CONFIG_HZ=1000/' arch/arm64/configs/konoha_defconfig ;;
-esac
 make -C "$KERNEL_DIR" O="$OUT_DIR" CC=clang LLVM=1 LLVM_IAS=1 \
   KCFLAGS="$KERNEL_KCFLAGS" LDFLAGS="$KERNEL_LDFLAGS" konoha_defconfig
 
@@ -357,7 +349,7 @@ case "$HZ_ID" in
     -e CONFIG_HZ_250 --set-val CONFIG_HZ 250 ;;
 esac
 
-# Hardened
+
 # NoMount config
 if [ "$NOMOUNT" == "on" ]; then
     "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -e CONFIG_NOMOUNT
@@ -365,6 +357,7 @@ else
     "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_NOMOUNT
 fi
 
+# Hardened
 [ "$HARDENED" == "off" ] && "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
   -d CONFIG_CPU_MITIGATIONS -d CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY
 
@@ -394,7 +387,7 @@ esac
 if [ -n "$VERSION_SPOOF" ]; then
   echo "[*] Spoofing kernel version: $VERSION_SPOOF"
   IFS='.' read -r V PL SL <<< "$VERSION_SPOOF"
-  if [ -z "$V" ] || [ -z "$PL" ] || [ -z "$SL" ]; then
+  if [ -z "$V" ] || [ -z "$PL" ] || [ -z "$SL" ] || ! [[ "$V" =~ ^[0-9]+$ ]] || ! [[ "$PL" =~ ^[0-9]+$ ]] || ! [[ "$SL" =~ ^[0-9]+$ ]]; then
     echo "[!] Invalid VERSION_SPOOF format: '$VERSION_SPOOF' (expected x.x.x), skipping spoof."
   else
     sed -i "s/^VERSION = .*/VERSION = $V/" "$KERNEL_DIR/Makefile"
@@ -415,6 +408,7 @@ echo "$CURRENT_CMDLINE" | grep -q "loglevel=" || CMDLINE_APPEND="$CMDLINE_APPEND
 if [ "$DEBUG_MODE" == "on" ]; then
   echo "$CURRENT_CMDLINE" | grep -q "nokaslr" || CMDLINE_APPEND="$CMDLINE_APPEND nokaslr"
 fi
+CMDLINE_APPEND="${CMDLINE_APPEND# }"
 [ -n "$CMDLINE_APPEND" ] && \
   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" \
   --set-str CONFIG_CMDLINE "$CURRENT_CMDLINE$CMDLINE_APPEND"
@@ -454,6 +448,13 @@ if [ "$KPM" == "on" ] && [ "$KPM_PATCH" == "on" ]; then
 fi
 
 # ==========================================
+# Verify image exists
+IMAGE_FOUND=0
+for img in Image.gz-dtb Image.gz Image; do
+  [ -f "$ZIMAGE_DIR/$img" ] && { IMAGE_FOUND=1; break; }
+done
+[ "$IMAGE_FOUND" == "0" ] && { echo "[-] No kernel image found!"; exit 1; }
+
 # Package
 # ==========================================
 TIME=$(date "+%Y%m%d-%H%M%S")
@@ -495,7 +496,7 @@ case "$HZ_ID" in
 esac
 
 # Clang label: "Neutron Clang 23.0.0" -> "NeutronClang23.0.0"
-CLANG_SHORT=$(echo "${KBUILD_COMPILER_STRING}" | sed 's/ Clang/Clang/g' | tr ' ' '-')
+CLANG_SHORT=$(echo "${KBUILD_COMPILER_STRING:-UnknownClang}" | sed 's/ Clang/Clang/g' | tr ' ' '-')
 
 # Spoof label (hanya tulis kalau ada)
 SPOOF_LABEL=""
