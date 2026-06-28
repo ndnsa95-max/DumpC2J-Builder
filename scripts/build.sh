@@ -57,15 +57,6 @@ export KBUILD_BUILD_HOST="DumpC2J"
 
 ACTUAL_ROOT="$ROOT"
 
-# Block known-broken combo: resukisu + susfs
-if [ "$ROOT" == "resukisu" ] && [ "$VARIANT" == "susfs" ]; then
-  echo "[!] WARNING: resukisu + susfs is currently broken (undefined ksu_*_proc_unprivillege symbols)"
-  echo "[!] Falling back to sukisu for susfs variant. Use root variant if you need resukisu."
-  ROOT="sukisu"
-  ROOT_REPO="https://github.com/sukisu-ultra/sukisu-ultra.git"
-  REPO_NAME="sukisu-ultra"
-  BRANCH="main"
-fi
 
 KPM_PATCH="on"
 if [ "$KPM" == "on" ] && [ "$ACTUAL_ROOT" == "resukisu" ]; then
