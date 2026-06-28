@@ -252,9 +252,9 @@ reply_hook = '\n\t\t/* rekernel reply hook */\n\t\tif (start_rekernel_server() =
 txn_hook = '\n\t\t/* rekernel txn hook */\n\t\tif (start_rekernel_server() == 0) {\n\t\t\tif (target_proc && target_proc->tsk && proc->tsk\n\t\t\t\t&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)\n\t\t\t\t&& (proc->pid != target_proc->pid)\n\t\t\t\t&& line_is_frozen(target_proc->tsk)) {\n\t\t\t\tchar binder_kmsg[PACKET_SIZE];\n\t\t\t\tsnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);\n\t\t\t\tsend_netlink_message(binder_kmsg, strlen(binder_kmsg));\n\t\t\t}\n\t\t}'
 
 if 'rekernel reply hook' not in bc:
-    anchor = '\t\tbinder_inner_proc_unlock(target_thread->proc);\n\t} else {'
+    anchor = '\t\t\tbinder_inner_proc_unlock(target_thread->proc);\n\t\t\ttrace_android_vh_binder_reply(target_proc, proc, thread, tr);\n\t} else {'
     if anchor in bc:
-        bc = bc.replace(anchor, '\t\tbinder_inner_proc_unlock(target_thread->proc);' + reply_hook + '\n\t} else {')
+        bc = bc.replace(anchor, '\t\t\tbinder_inner_proc_unlock(target_thread->proc);' + reply_hook + '\n\t\t\ttrace_android_vh_binder_reply(target_proc, proc, thread, tr);\n\t} else {')
         print("[+] binder.c: reply hook injected")
     else:
         print("[-] binder.c: reply anchor NOT FOUND", file=sys.stderr)
@@ -282,9 +282,9 @@ if '#include "../drivers/android/rekernel.h"' not in sc:
 sig_hook = '\n\t/* rekernel signal hook */\n\tif (start_rekernel_server() == 0) {\n\t\tif (line_is_frozen(current) && (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT)) {\n\t\t\tchar binder_kmsg[PACKET_SIZE];\n\t\t\tsnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(p), task_uid(p).val, task_tgid_nr(current), task_uid(current).val);\n\t\t\tsend_netlink_message(binder_kmsg, strlen(binder_kmsg));\n\t\t}\n\t}'
 
 if 'rekernel signal hook' not in sc:
-    anchor = '\tint ret = -ESRCH;\n\n\tif (lock_task_sighand'
+    anchor = '\tint ret = -ESRCH;\n\ttrace_android_vh_do_send_sig_info(sig, current, p);\n\tif (lock_task_sighand'
     if anchor in sc:
-        sc = sc.replace(anchor, '\tint ret = -ESRCH;' + sig_hook + '\n\n\tif (lock_task_sighand')
+        sc = sc.replace(anchor, '\tint ret = -ESRCH;' + sig_hook + '\n\ttrace_android_vh_do_send_sig_info(sig, current, p);\n\tif (lock_task_sighand')
         print("[+] signal.c: signal hook injected")
     else:
         print("[-] signal.c: anchor NOT FOUND", file=sys.stderr)
