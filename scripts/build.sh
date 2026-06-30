@@ -113,6 +113,9 @@ else
 
   # SUSFS
   if [ "$VARIANT" == "susfs" ]; then
+    if [ "$ROOT" == "mambosu" ]; then
+      echo "[!] MamboSU: SUSFS not supported, skipping SUSFS injection."
+    else
     SUSFS_DIR="$MODULES_DIR/susfs4ksu"
     if [ ! -d "$SUSFS_DIR" ]; then
       git clone --depth=1 https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android15-6.6-dev "$SUSFS_DIR"
@@ -143,6 +146,7 @@ else
         patch -p1 --forward -f --reject-file=- \
         < "$SUSFS_DIR/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true)
     fi
+    fi # end mambosu guard
   fi
 
   # SukiSU/YukiSU uapi symlink
@@ -260,6 +264,7 @@ if [ "$ROOT" == "resukisu" ] && [ "$VARIANT" == "susfs" ]; then
   if [ ! -f "$SUCOMPAT_IMPL" ]; then
     echo "[*] Generating sucompat_proc_flag.c for ReSukiSU susfs LTO fix..."
     cat > "$SUCOMPAT_IMPL" << 'SCEOF'
+#include <linux/types.h>
 #include <linux/thread_info.h>
 #ifdef CONFIG_64BIT
 #define TIF_PROC_NON_PRIVILEGE 62
@@ -279,9 +284,6 @@ SCEOF
     echo "kernelsu-objs += feature/sucompat_proc_flag.o" >> "$MODULES_DIR/$REPO_NAME/kernel/Kbuild"
     echo "[+] sucompat_proc_flag.c generated and added to Kbuild"
   fi
-fi
-
-
 fi
 
 # ==========================================
