@@ -256,10 +256,19 @@ RKPY
 echo "[+] Re-Kernel integration done!"
 
 # ==========================================
+# ReSukiSU: fix ksu_init_rc_hook_key_false typo in ksud_integration.c
+if [ "$ROOT" == "resukisu" ]; then
+  KSUD_INT="$MODULES_DIR/$REPO_NAME/kernel/runtime/ksud_integration.c"
+  if [ -f "$KSUD_INT" ]; then
+    sed -i 's/ksu_init_rc_hook_key_false/ksu_is_init_rc_hook_enabled/g' "$KSUD_INT"
+    echo "[*] ReSukiSU: fixed ksu_init_rc_hook_key_false typo"
+  fi
+fi
+
 # ReSukiSU susfs: define proc_unprivillege symbols as non-inline
 # (static inline breaks under LTO with external callers)
 # ==========================================
-if [ "$ROOT" == "resukisu" ] && [ "$VARIANT" == "susfs" ]; then
+if [ "$ROOT" == "resukisu" ]; then
   SUCOMPAT_IMPL="$MODULES_DIR/$REPO_NAME/kernel/feature/sucompat_proc_flag.c"
   if [ ! -f "$SUCOMPAT_IMPL" ]; then
     echo "[*] Generating sucompat_proc_flag.c for ReSukiSU susfs LTO fix..."
