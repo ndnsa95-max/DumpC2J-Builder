@@ -355,7 +355,7 @@ case "$VARIANT" in
 esac
 
 # KPM: enable for sukisu/folkpatch only
-if [ "$ROOT" == "sukisu" ] || [ "$ROOT" == "folkpatch" ]; then
+if [ "$ROOT" == "sukisu" ]; then
   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -e CONFIG_KPM
 else
   "$KERNEL_DIR/scripts/config" --file "$OUT_DIR/.config" -d CONFIG_KPM
