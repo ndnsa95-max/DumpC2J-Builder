@@ -115,6 +115,10 @@ else
   if [ "$VARIANT" == "susfs" ]; then
     if [ "$ROOT" == "mambosu" ]; then
       echo "[!] MamboSU: SUSFS not supported, skipping patch. Copying headers only..."
+      SUSFS_DIR="$MODULES_DIR/susfs4ksu"
+      if [ ! -d "$SUSFS_DIR" ]; then
+        git clone --depth=1 https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android15-6.6-dev "$SUSFS_DIR"
+      fi
       cp "$SUSFS_DIR/kernel_patches/include/linux/susfs.h" "$KERNEL_DIR/include/linux/susfs.h"
       [ -f "$SUSFS_DIR/kernel_patches/include/linux/susfs_def.h" ] && \
         cp "$SUSFS_DIR/kernel_patches/include/linux/susfs_def.h" "$KERNEL_DIR/include/linux/susfs_def.h"
