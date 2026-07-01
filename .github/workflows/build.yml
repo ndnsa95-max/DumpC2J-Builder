@@ -7,7 +7,7 @@ on:
         description: "Custom Kernel Name (LOCALVERSION)"
         required: true
         type: string
-        default: "-DumpC2J-Kernel"
+        default: "-anykern3-11-DumpC2J"
       spoof_uname:
         description: "Spoof Uname (SUSFS/Stock Naming)"
         required: true
@@ -15,7 +15,7 @@ on:
         options:
           - "off"
           - "on"
-        default: "on"
+        default: "off"
       clang_variant:
         description: "Clang Toolchain"
         required: true
@@ -25,7 +25,7 @@ on:
           - cirrus
           - weebx
           - zyc
-        default: cirrus
+        default: neutron
       hz:
         description: "Refresh Rate (HZ)"
         required: true
@@ -36,7 +36,7 @@ on:
           - smooth
           - performance
           - ultra-performance
-        default: ultra-performance
+        default: smooth
       variant:
         description: "Build Variant"
         required: true
@@ -45,7 +45,7 @@ on:
           - stock
           - root
           - susfs
-        default: susfs
+        default: stock
       root:
         description: "Root Method"
         required: true
@@ -56,7 +56,7 @@ on:
           - kowsu
           - sukisu
           - resukisu
-        default: resukisu
+        default: sukisu
       lto:
         description: "LTO Mode"
         required: true
