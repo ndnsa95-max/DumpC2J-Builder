@@ -53,6 +53,7 @@ on:
         options:
           - none
           - ksu-next
+          - kowsu
           - sukisu
           - resukisu
         default: resukisu
