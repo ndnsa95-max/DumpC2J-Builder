@@ -28,13 +28,6 @@ case "$INPUT_VARIANT" in
   *)     VARIANT_LABEL="${INPUT_VARIANT:-unknown}" ;;
 esac
 
-# KPM
-if [ "${ACTUAL_ROOT:-none}" == "sukisu" ]; then
-  KPM_STATUS="✅ Enabled"
-else
-  KPM_STATUS="❌ Disabled"
-fi
-
 # Features (selalu on, tampilin aja)
 FEAT=""
 FEAT="${FEAT}✅ HTSR 240Hz Touch\n"
@@ -52,7 +45,6 @@ MESSAGE="🔧 *DumpC2J Kernel Build*
 🌿 *Variant:* ${VARIANT_LABEL}
 🔢 *HZ:* ${HZ_ID} Hz
 🔗 *LTO:* ${LTO_ACTUAL}
-🤖 *KPM:* ${KPM_STATUS}
 ⚙️ *Clang:* ${KBUILD_COMPILER_STRING}
 
 *Features:*
