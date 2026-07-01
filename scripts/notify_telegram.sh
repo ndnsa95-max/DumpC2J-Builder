@@ -26,7 +26,10 @@ while IFS= read -r line; do
   [ -z "$line" ] && continue
   type=$(echo "$line" | grep -oP '^[a-zA-Z]+(?=(\([^)]*\))?:)' || true)
   type=$(echo "$type" | tr '[:upper:]' '[:lower:]')
-  desc=$(echo "$line" | sed -E 's/^[a-zA-Z]+(\([^)]*\))?:\s*//')
+  desc="$line"
+  while echo "$desc" | grep -qP '^[a-zA-Z]+(\([^)]*\))?:\s*'; do
+    desc=$(echo "$desc" | sed -E 's/^[a-zA-Z]+(\([^)]*\))?:\s*//')
+  done
   desc="$(tr '[:lower:]' '[:upper:]' <<< "${desc:0:1}")${desc:1}"
 
   case "$type" in
