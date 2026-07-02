@@ -12,5 +12,5 @@ make -C "$KERNEL_DIR" \
   CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm \
   OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip \
   LLVM=1 LLVM_IAS=1 \
-  KCFLAGS="$KERNEL_KCFLAGS" KBUILD_LDFLAGS="$KERNEL_LDFLAGS" \
+  KCFLAGS="$KERNEL_KCFLAGS" LDFLAGS_vmlinux="$KERNEL_LDFLAGS" \
   || { echo "[-] Build failed!"; exit 1; }
