@@ -12,7 +12,7 @@ done
 
 # Package
 # ==========================================
-TIME=$(date "+%Y%m%d-%H%M%S")
+: "${BUILD_START:?BUILD_START not set — check sourcing order}"
 TEMP_DIR="${GITHUB_WORKSPACE}/anykernel_temp"
 rm -rf "$TEMP_DIR"
 cp -r "$ANYKERNEL_DIR" "$TEMP_DIR"
