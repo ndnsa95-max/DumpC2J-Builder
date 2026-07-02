@@ -81,6 +81,7 @@ case "${CLANG_VARIANT}" in
     ;;
 esac
 
+echo "CLANG_VARIANT=${CLANG_VARIANT}" >> "${GITHUB_ENV}"
 echo "CLANG_PATH=${CLANG_BIN}" >> "${GITHUB_ENV}"
 echo "${CLANG_BIN}" >> "${GITHUB_PATH}"
 echo "KBUILD_COMPILER_STRING=${COMPILER_STRING}" >> "${GITHUB_ENV}"
